@@ -83,7 +83,17 @@ npx tsc
 node dist/cli.js some-grid.txt
 ```
 
+## Testing
+
+Uses Node's built-in test runner, no test framework dependency:
+
+```
+npm test
+```
+
 ## Status
 
 Early skeleton: single-grid normalization and the two output modes
-work. See the issue tracker for what's planned next.
+work, with unit test coverage for character mapping and the padding
+and blank-line edge cases. See the issue tracker for what's planned
+next.
