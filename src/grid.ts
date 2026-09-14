@@ -22,7 +22,14 @@ export interface Stats {
 }
 
 export class NormalizeError extends Error {
-  constructor(message: string, readonly row: number, readonly col: number) {
+  constructor(
+    message: string,
+    readonly row: number,
+    readonly col: number,
+    // set when the error came from a specific grid within a multi-grid
+    // file, so the message can point at the right one.
+    readonly gridIndex?: number
+  ) {
     super(message);
     this.name = "NormalizeError";
   }
@@ -99,6 +106,55 @@ export function normalizeGrid(input: string): NormalizeResult {
   });
 
   return { grid: { width, height: rows.length, rows }, warnings };
+}
+
+// Splits a file into the text of each grid it contains. A single blank
+// line is left alone here - normalizeGrid already treats a lone blank
+// line as copy/paste noise within one grid. A run of two or more blank
+// lines is different: that's a deliberate gap, so it's treated as the
+// boundary between one grid and the next.
+export function splitGridSections(input: string): string[] {
+  const rawLines = input.split(/\r\n|\r|\n/).map((line) => line.replace(/\s+$/, ""));
+
+  const sections: string[][] = [[]];
+  let blankRun = 0;
+
+  for (const line of rawLines) {
+    if (line.length === 0) {
+      blankRun++;
+      continue;
+    }
+
+    if (blankRun >= 2) {
+      sections.push([]);
+    } else if (blankRun === 1) {
+      sections[sections.length - 1]!.push("");
+    }
+    blankRun = 0;
+    sections[sections.length - 1]!.push(line);
+  }
+
+  return sections
+    .map((lines) => lines.join("\n"))
+    .filter((section) => section.length > 0);
+}
+
+export function normalizeGrids(input: string): NormalizeResult[] {
+  const sections = splitGridSections(input);
+  if (sections.length === 0) {
+    throw new NormalizeError("input has no grid content", 0, 0);
+  }
+
+  return sections.map((section, index) => {
+    try {
+      return normalizeGrid(section);
+    } catch (err) {
+      if (err instanceof NormalizeError) {
+        throw new NormalizeError(err.message, err.row, err.col, index + 1);
+      }
+      throw err;
+    }
+  });
 }
 
 export function computeStats(grid: Grid): Stats {

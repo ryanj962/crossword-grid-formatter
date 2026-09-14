@@ -1,15 +1,19 @@
 import { readFileSync } from "node:fs";
 import process from "node:process";
-import { computeStats, normalizeGrid, NormalizeError } from "./grid.js";
-import { formatHuman, formatJson } from "./format.js";
+import { computeStats, normalizeGrids, NormalizeError } from "./grid.js";
+import { formatHumanMulti, formatJsonMulti } from "./format.js";
 
 const HELP = `usage: grid-fmt [file] [--json]
 
-Reads a crossword grid from FILE (or stdin if omitted) and prints it
-back out in a canonical form: block cells as '#', empty cells as '.',
-filled cells as an uppercase letter.
+Reads one or more crossword grids from FILE (or stdin if omitted) and
+prints each back out in a canonical form: block cells as '#', empty
+cells as '.', filled cells as an uppercase letter.
 
-  --json    print the normalized grid and stats as JSON instead of
+A file can hold more than one grid - separate them with two or more
+blank lines. A single blank line inside one grid is treated as
+copy/paste noise and dropped instead.
+
+  --json    print the normalized grid(s) and stats as JSON instead of
             the human-readable layout
   -h, --help  show this message
 `;
@@ -53,15 +57,20 @@ function main(): void {
   }
 
   try {
-    const { grid, warnings } = normalizeGrid(input);
-    const stats = computeStats(grid);
-    const output = json
-      ? formatJson(grid, stats, warnings)
-      : formatHuman(grid, stats, warnings);
+    const results = normalizeGrids(input).map((result) => ({
+      grid: result.grid,
+      stats: computeStats(result.grid),
+      warnings: result.warnings,
+    }));
+    const output = json ? formatJsonMulti(results) : formatHumanMulti(results);
     process.stdout.write(output + "\n");
   } catch (err) {
     if (err instanceof NormalizeError) {
-      process.stderr.write(`${err.message} (row ${err.row}, col ${err.col})\n`);
+      const location =
+        err.gridIndex === undefined
+          ? `row ${err.row}, col ${err.col}`
+          : `grid ${err.gridIndex}, row ${err.row}, col ${err.col}`;
+      process.stderr.write(`${err.message} (${location})\n`);
       process.exit(1);
     }
     throw err;

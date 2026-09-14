@@ -65,6 +65,56 @@ Reading from stdin works the same way:
 $ cat messy.txt | node dist/cli.js --json
 ```
 
+## Multiple grids in one file
+
+A file can hold more than one grid. Separate them with two or more
+blank lines:
+
+```
+#.#
+...
+#.#
+
+
+X..
+...
+.X.
+```
+
+```
+$ node dist/cli.js multi.txt
+grid 1 of 2:
+
+#.#
+...
+#.#
+
+3x3
+4 block, 0 filled, 5 empty
+180-degree symmetric: yes
+
+----------------------------------------
+
+grid 2 of 2:
+
+#..
+...
+.#.
+
+3x3
+2 block, 0 filled, 7 empty
+180-degree symmetric: no
+```
+
+A *single* blank line inside a grid's rows is left alone - it's
+treated as copy/paste noise and dropped, the same as a lone blank
+line at the top or bottom of the file. Only a run of two or more
+blank lines counts as the gap between grids.
+
+With `--json`, a file with exactly one grid still prints the plain
+object shown above. A file with more than one grid prints a JSON
+array of those same objects, in order.
+
 If a row is shorter than the widest row in the grid, it gets padded
 out with block cells and a warning is added to the output (visible in
 both modes) rather than failing outright - a truncated row is almost
@@ -93,7 +143,7 @@ npm test
 
 ## Status
 
-Early skeleton: single-grid normalization and the two output modes
-work, with unit test coverage for character mapping and the padding
-and blank-line edge cases. See the issue tracker for what's planned
-next.
+Early skeleton: normalization, multi-grid files, and the two output
+modes work, with unit test coverage for character mapping, the
+padding and blank-line edge cases, and grid splitting. See the issue
+tracker for what's planned next.

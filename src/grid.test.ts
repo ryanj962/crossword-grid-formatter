@@ -1,6 +1,12 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { computeStats, normalizeGrid, NormalizeError } from "./grid.js";
+import {
+  computeStats,
+  normalizeGrid,
+  normalizeGrids,
+  splitGridSections,
+  NormalizeError,
+} from "./grid.js";
 import { gridToRows } from "./format.js";
 
 test("recognizes every block character variant", () => {
@@ -96,4 +102,45 @@ test("computeStats detects asymmetric grids", () => {
   const { grid } = normalizeGrid("#..\n...\n.#.");
   const stats = computeStats(grid);
   assert.equal(stats.symmetric180, false);
+});
+
+test("splitGridSections keeps a single grid as one section", () => {
+  const sections = splitGridSections("###\n#.#\n###");
+  assert.deepEqual(sections, ["###\n#.#\n###"]);
+});
+
+test("splitGridSections treats two or more blank lines as a grid boundary", () => {
+  const sections = splitGridSections("###\n#.#\n\n\n@@@\n@.@");
+  assert.deepEqual(sections, ["###\n#.#", "@@@\n@.@"]);
+});
+
+test("splitGridSections leaves a single blank line inside a section alone", () => {
+  const sections = splitGridSections("###\n\n#.#");
+  assert.deepEqual(sections, ["###\n\n#.#"]);
+});
+
+test("splitGridSections drops leading and trailing blank runs", () => {
+  const sections = splitGridSections("\n\n###\n#.#\n\n\n");
+  assert.deepEqual(sections, ["###\n#.#"]);
+});
+
+test("normalizeGrids parses each section of a multi-grid file", () => {
+  const results = normalizeGrids("##\n..\n\n\n#.\n.#");
+  assert.equal(results.length, 2);
+  assert.deepEqual(gridToRows(results[0]!.grid), ["##", ".."]);
+  assert.deepEqual(gridToRows(results[1]!.grid), ["#.", ".#"]);
+});
+
+test("normalizeGrids tags an error with the failing grid's index", () => {
+  try {
+    normalizeGrids("##\n..\n\n\n#?\n.#");
+    assert.fail("expected normalizeGrids to throw");
+  } catch (err) {
+    assert.ok(err instanceof NormalizeError);
+    if (err instanceof NormalizeError) {
+      assert.equal(err.gridIndex, 2);
+      assert.equal(err.row, 1);
+      assert.equal(err.col, 2);
+    }
+  }
 });
