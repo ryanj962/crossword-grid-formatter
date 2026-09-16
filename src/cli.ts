@@ -1,6 +1,6 @@
 import { readFileSync } from "node:fs";
 import process from "node:process";
-import { computeStats, normalizeGrids, NormalizeError } from "./grid.js";
+import { computeStats, normalizeGrids, numberClues, NormalizeError } from "./grid.js";
 import { formatHumanMulti, formatJsonMulti } from "./format.js";
 
 const HELP = `usage: grid-fmt [file] [--json]
@@ -61,6 +61,7 @@ function main(): void {
       grid: result.grid,
       stats: computeStats(result.grid),
       warnings: result.warnings,
+      clues: numberClues(result.grid),
     }));
     const output = json ? formatJsonMulti(results) : formatHumanMulti(results);
     process.stdout.write(output + "\n");

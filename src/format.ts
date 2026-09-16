@@ -1,4 +1,4 @@
-import type { Grid, Stats } from "./grid.js";
+import type { ClueNumber, Grid, Stats } from "./grid.js";
 
 function cellChar(cell: Grid["rows"][number][number]): string {
   if (cell.type === "block") return "#";
@@ -10,7 +10,18 @@ export function gridToRows(grid: Grid): string[] {
   return grid.rows.map((row) => row.map(cellChar).join(""));
 }
 
-export function formatHuman(grid: Grid, stats: Stats, warnings: string[]): string {
+function clueLabel(clue: ClueNumber): string {
+  if (clue.across && clue.down) return `${clue.number} across/down`;
+  if (clue.across) return `${clue.number} across`;
+  return `${clue.number} down`;
+}
+
+export function formatHuman(
+  grid: Grid,
+  stats: Stats,
+  warnings: string[],
+  clues: ClueNumber[]
+): string {
   const lines = gridToRows(grid);
   const summary = [
     `${stats.width}x${stats.height}`,
@@ -20,6 +31,13 @@ export function formatHuman(grid: Grid, stats: Stats, warnings: string[]): strin
 
   const out = [...lines, "", ...summary];
 
+  if (clues.length > 0) {
+    out.push("", "clues:");
+    for (const clue of clues) {
+      out.push(`  - ${clueLabel(clue)} at row ${clue.row}, col ${clue.col}`);
+    }
+  }
+
   if (warnings.length > 0) {
     out.push("", "warnings:");
     for (const w of warnings) out.push(`  - ${w}`);
@@ -28,7 +46,7 @@ export function formatHuman(grid: Grid, stats: Stats, warnings: string[]): strin
   return out.join("\n");
 }
 
-function toJsonResult(grid: Grid, stats: Stats, warnings: string[]) {
+function toJsonResult(grid: Grid, stats: Stats, warnings: string[], clues: ClueNumber[]) {
   return {
     width: stats.width,
     height: stats.height,
@@ -37,18 +55,25 @@ function toJsonResult(grid: Grid, stats: Stats, warnings: string[]) {
     filledCount: stats.filledCount,
     emptyCount: stats.emptyCount,
     symmetric180: stats.symmetric180,
+    clues,
     warnings,
   };
 }
 
-export function formatJson(grid: Grid, stats: Stats, warnings: string[]): string {
-  return JSON.stringify(toJsonResult(grid, stats, warnings), null, 2);
+export function formatJson(
+  grid: Grid,
+  stats: Stats,
+  warnings: string[],
+  clues: ClueNumber[]
+): string {
+  return JSON.stringify(toJsonResult(grid, stats, warnings, clues), null, 2);
 }
 
 export interface GridResult {
   grid: Grid;
   stats: Stats;
   warnings: string[];
+  clues: ClueNumber[];
 }
 
 // A file with exactly one grid keeps the plain single-grid shape, so
@@ -57,10 +82,10 @@ export interface GridResult {
 export function formatJsonMulti(results: GridResult[]): string {
   if (results.length === 1) {
     const [r] = results;
-    return formatJson(r!.grid, r!.stats, r!.warnings);
+    return formatJson(r!.grid, r!.stats, r!.warnings, r!.clues);
   }
   return JSON.stringify(
-    results.map((r) => toJsonResult(r.grid, r.stats, r.warnings)),
+    results.map((r) => toJsonResult(r.grid, r.stats, r.warnings, r.clues)),
     null,
     2
   );
@@ -69,12 +94,12 @@ export function formatJsonMulti(results: GridResult[]): string {
 export function formatHumanMulti(results: GridResult[]): string {
   if (results.length === 1) {
     const [r] = results;
-    return formatHuman(r!.grid, r!.stats, r!.warnings);
+    return formatHuman(r!.grid, r!.stats, r!.warnings, r!.clues);
   }
   return results
     .map(
       (r, i) =>
-        `grid ${i + 1} of ${results.length}:\n\n${formatHuman(r.grid, r.stats, r.warnings)}`
+        `grid ${i + 1} of ${results.length}:\n\n${formatHuman(r.grid, r.stats, r.warnings, r.clues)}`
     )
     .join("\n\n" + "-".repeat(40) + "\n\n");
 }

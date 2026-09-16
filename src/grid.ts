@@ -157,6 +157,53 @@ export function normalizeGrids(input: string): NormalizeResult[] {
   });
 }
 
+export interface ClueNumber {
+  number: number;
+  row: number;
+  col: number;
+  across: boolean;
+  down: boolean;
+}
+
+// Standard crossword numbering: scan the grid in reading order (left to
+// right, top to bottom) and hand out the next number to any open cell
+// that starts an across and/or down entry of length two or more. A cell
+// starts an across entry if its left neighbor is a block (or off the
+// grid) and its right neighbor is open, and symmetrically for down.
+export function numberClues(grid: Grid): ClueNumber[] {
+  const isOpen = (row: number, col: number): boolean =>
+    row >= 0 &&
+    row < grid.height &&
+    col >= 0 &&
+    col < grid.width &&
+    grid.rows[row]![col]!.type !== "block";
+
+  const clues: ClueNumber[] = [];
+  let next = 1;
+
+  for (let row = 0; row < grid.height; row++) {
+    for (let col = 0; col < grid.width; col++) {
+      if (!isOpen(row, col)) continue;
+
+      const startsAcross = !isOpen(row, col - 1) && isOpen(row, col + 1);
+      const startsDown = !isOpen(row - 1, col) && isOpen(row + 1, col);
+
+      if (startsAcross || startsDown) {
+        clues.push({
+          number: next,
+          row: row + 1,
+          col: col + 1,
+          across: startsAcross,
+          down: startsDown,
+        });
+        next++;
+      }
+    }
+  }
+
+  return clues;
+}
+
 export function computeStats(grid: Grid): Stats {
   let blockCount = 0;
   let filledCount = 0;

@@ -38,6 +38,27 @@ Every block variant (`#`, `X`, `x`, `■`, `*`, `@`) is normalized to
 `#`. Empty-but-open cells (`.`, `_`, `-`, a bare space) become `.`.
 Letters are uppercased in place.
 
+Standard crossword numbering is derived from the block layout - a cell
+gets a number if it starts an across and/or down entry of length two
+or more. It's printed as a `clues:` section after the stats:
+
+```
+$ node dist/cli.js messy.txt
+#..#....#
+#.......#
+..###....
+....#..#.
+
+9x4
+9 block, 0 filled, 27 empty
+180-degree symmetric: no
+
+clues:
+  - 1 across/down at row 1, col 2
+  - 2 down at row 1, col 3
+  ...
+```
+
 With `--json`:
 
 ```
@@ -55,6 +76,10 @@ $ node dist/cli.js messy.txt --json
   "filledCount": 0,
   "emptyCount": 27,
   "symmetric180": false,
+  "clues": [
+    { "number": 1, "row": 1, "col": 2, "across": true, "down": true },
+    { "number": 2, "row": 1, "col": 3, "across": false, "down": true }
+  ],
   "warnings": []
 }
 ```
@@ -143,7 +168,7 @@ npm test
 
 ## Status
 
-Early skeleton: normalization, multi-grid files, and the two output
-modes work, with unit test coverage for character mapping, the
-padding and blank-line edge cases, and grid splitting. See the issue
-tracker for what's planned next.
+Early skeleton: normalization, multi-grid files, clue numbering, and
+the two output modes work, with unit test coverage for character
+mapping, the padding and blank-line edge cases, grid splitting, and
+clue numbering. See the issue tracker for what's planned next.

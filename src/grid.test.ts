@@ -4,6 +4,7 @@ import {
   computeStats,
   normalizeGrid,
   normalizeGrids,
+  numberClues,
   splitGridSections,
   NormalizeError,
 } from "./grid.js";
@@ -129,6 +130,36 @@ test("normalizeGrids parses each section of a multi-grid file", () => {
   assert.equal(results.length, 2);
   assert.deepEqual(gridToRows(results[0]!.grid), ["##", ".."]);
   assert.deepEqual(gridToRows(results[1]!.grid), ["#.", ".#"]);
+});
+
+test("numberClues numbers a fully open grid in reading order", () => {
+  const { grid } = normalizeGrid("..\n..");
+  assert.deepEqual(numberClues(grid), [
+    { number: 1, row: 1, col: 1, across: true, down: true },
+    { number: 2, row: 1, col: 2, across: false, down: true },
+    { number: 3, row: 2, col: 1, across: true, down: false },
+  ]);
+});
+
+test("numberClues does not number a single cell isolated by blocks", () => {
+  const { grid } = normalizeGrid("#.#");
+  assert.deepEqual(numberClues(grid), []);
+});
+
+test("numberClues skips down numbers for entries only one row tall", () => {
+  const { grid } = normalizeGrid("...");
+  const clues = numberClues(grid);
+  assert.deepEqual(clues, [{ number: 1, row: 1, col: 1, across: true, down: false }]);
+});
+
+test("numberClues assigns one number per cell even when a word starts both ways", () => {
+  const { grid } = normalizeGrid("...\n#.#\n...");
+  const clues = numberClues(grid);
+  // (1,2) opens the down word through the middle column - across is
+  // blocked on both sides at row 2, so only the down flag is set there.
+  const middleColumnClue = clues.find((c) => c.row === 1 && c.col === 2);
+  assert.ok(middleColumnClue);
+  assert.equal(middleColumnClue!.down, true);
 });
 
 test("normalizeGrids tags an error with the failing grid's index", () => {
